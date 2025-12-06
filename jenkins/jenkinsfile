@@ -1,5 +1,5 @@
 pipeline {
-    agent any
+    agent any { label 'Agent01' }
     
     environment {
         AWS_ACCESS_KEY_ID     = credentials('AKIARUV3S7NMQ5WMG22H')
@@ -126,16 +126,12 @@ pipeline {
         }
         always {
             // Cleanup
-            node{
-                
                 dir('terraform-apache-project') {
                 sh '''
                 rm -f public_ip.txt website_url.txt private_ip.txt 2>/dev/null || true
                 rm -f terraform.tfstate* 2>/dev/null || true
                 '''
             }
-            }
-            
         }
     }
 }
