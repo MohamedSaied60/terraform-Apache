@@ -17,7 +17,7 @@ pipeline {
         
         stage('Terraform Init') {
             steps {
-                dir('Apache-Terraform-Deployment') {
+                dir('.') {
                     sh 'terraform init'
                 }
             }
@@ -25,7 +25,7 @@ pipeline {
         
         stage('Terraform Plan') {
             steps {
-                dir('Apache-Terraform-Deployment') {
+                dir('.') {
                     sh 'terraform plan'
                 }
             }
@@ -33,7 +33,7 @@ pipeline {
         
         stage('Terraform Apply') {
             steps {
-                dir('Apache-Terraform-Deployment') {
+                dir('.') {
                     withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
                         sh 'terraform apply -auto-approve'
                     }
