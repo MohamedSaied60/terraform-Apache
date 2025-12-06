@@ -2,12 +2,10 @@ pipeline {
     agent any
     
     environment {
-        AWS_ACCESS_KEY_ID     = credentials('AKIARUV3S7NMQ5WMG22H')
-        AWS_SECRET_ACCESS_KEY = credentials('7DFIvSNPYTvuYrvMKP39dEBd+Gd8nVUTljAWeV+g')
-        AWS_DEFAULT_REGION    = 'us-east-1'
-        TF_VAR_your_name      = 'Your Name Here'  // UPDATE THIS
-        TF_VAR_environment    = 'jenkins'
-   }
+        AWS_DEFAULT_REGION = 'us-east-1'
+        TF_VAR_your_name   = 'Your Name Here'
+        TF_VAR_environment = 'jenkins'
+    }
     
     stages {
         stage('Checkout') {
@@ -17,55 +15,27 @@ pipeline {
             }
         }
         
-        stage('Setup Terraform') {
-            steps {
-                sh '''
-                # Install Terraform if not present
-                if ! command -v terraform &> /dev/null; then
-                    wget https://releases.hashicorp.com/terraform/1.6.0/terraform_1.6.0_linux_amd64.zip
-                    unzip terraform_1.6.0_linux_amd64.zip
-                    sudo mv terraform /usr/local/bin/
-                fi
-                terraform version
-                '''
-            }
-        }
-        
         stage('Terraform Init') {
             steps {
-                dir('terraform-apache-project') {
+                dir('terraform-Apache') {
                     sh 'terraform init'
-                    echo '✅ Terraform initialized'
                 }
             }
         }
         
         stage('Terraform Plan') {
             steps {
-                dir('terraform-apache-project') {
+                dir('terraform-Apache') {
                     sh 'terraform plan'
-                    echo '✅ Terraform plan completed'
                 }
             }
         }
         
         stage('Terraform Apply') {
             steps {
-                dir('terraform-apache-project') {
-                    sh 'terraform apply -auto-approve'
-                    echo '✅ Infrastructure deployed'
-                    
-                    // Save outputs
-                    sh '''
-                    terraform output public_ip > public_ip.txt
-                    terraform output website_url > website_url.txt
-                    terraform output private_ip > private_ip.txt
-                    '''
-                    
-                    script {
-                        env.PUBLIC_IP = readFile('public_ip.txt').trim()
-                        env.WEBSITE_URL = readFile('website_url.txt').trim()
-                        env.PRIVATE_IP = readFile('private_ip.txt').trim()
+                dir('terraform-Apache') {
+                    withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
+                        sh 'terraform apply -auto-approve'
                     }
                 }
             }
@@ -77,8 +47,8 @@ pipeline {
                     timeout(time: 3, unit: 'MINUTES') {
                         waitUntil {
                             try {
-                                sh "curl -s -f -o /dev/null -w '%{http_code}' http://${env.PUBLIC_IP}/health.html"
-                                return true
+                                def status = sh(script: "curl -s -o /dev/null -w '%{http_code}' http://${env.PUBLIC_IP}/health.html", returnStdout: true).trim()
+                                return status == '200'
                             } catch (Exception e) {
                                 echo "⏳ Waiting for Apache to start... (30s)"
                                 sleep 30
@@ -86,33 +56,8 @@ pipeline {
                             }
                         }
                     }
-                    echo '✅ Apache server is healthy and responding'
-                }
-            }
-        }
-        
-        stage('Display Results') {
-            steps {
-                script {
-                    echo "========================================"
-                    echo "🎉 DEPLOYMENT SUCCESSFUL!"
-                    echo "========================================"
-                    echo "👤 Your Name: ${TF_VAR_your_name}"
-                    echo "🌐 Website URL: ${env.WEBSITE_URL}"
-                    echo "🔒 Private IP: ${env.PRIVATE_IP}"
-                    echo "🔗 Health Check: http://${env.PUBLIC_IP}/health.html"
-                    echo "========================================"
-                    
-                    // Send to chat
-                    sh """
-                    echo "Deployment Summary:" > deployment_summary.txt
-                    echo "Your Name: ${TF_VAR_your_name}" >> deployment_summary.txt
-                    echo "Website: ${env.WEBSITE_URL}" >> deployment_summary.txt
-                    echo "Private IP: ${env.PRIVATE_IP}" >> deployment_summary.txt
-                    """
                 }
             }
         }
     }
-    
 }
