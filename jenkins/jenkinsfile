@@ -115,23 +115,4 @@ pipeline {
         }
     }
     
-    post {
-        success {
-            echo '✅ Pipeline executed successfully!'
-            echo "🌐 Access your Apache server at: ${env.WEBSITE_URL}"
-            archiveArtifacts artifacts: 'deployment_summary.txt', fingerprint: true
-        }
-        failure {
-            echo '❌ Pipeline failed!'
-        }
-        always {
-            // Cleanup
-                dir('terraform-apache-project') {
-                sh '''
-                rm -f public_ip.txt website_url.txt private_ip.txt 2>/dev/null || true
-                rm -f terraform.tfstate* 2>/dev/null || true
-                '''
-            }
-        }
-    }
 }
