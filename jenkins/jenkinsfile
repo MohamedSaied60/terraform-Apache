@@ -26,7 +26,11 @@ pipeline {
         stage('Terraform Plan') {
             steps {
                 dir('.') {
-                    sh 'terraform plan'
+                    withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
+                        sh '''
+                            terraform plan
+                        '''
+                    }
                 }
             }
         }
