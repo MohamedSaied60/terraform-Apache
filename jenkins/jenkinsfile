@@ -126,12 +126,16 @@ pipeline {
         }
         always {
             // Cleanup
-            dir('terraform-apache-project') {
+            node{
+                
+                dir('terraform-apache-project') {
                 sh '''
                 rm -f public_ip.txt website_url.txt private_ip.txt 2>/dev/null || true
                 rm -f terraform.tfstate* 2>/dev/null || true
                 '''
             }
+            }
+            
         }
     }
 }
